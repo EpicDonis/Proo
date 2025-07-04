@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Réservation - Disponibilités</title>
+<style>
+  body {
+    max-width: 650px;
+    margin: auto;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background: #f9f9f9;
+  }
+  h1 {
+    text-align: center;
+    color: #333;
+  }
+  .slot {
+    background: white;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 0 7px rgba(0,0,0,0.1);
+  }
+  .desc {
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  .hours {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .hour-btn {
+    background-color: #007bff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .hour-btn.booked {
+    background-color: #dc3545;
+    cursor: default;
+    text-decoration: line-through;
+  }
+  .hour-btn:hover:not(.booked) {
+    background-color: #0056b3;
+  }
+  nav {
+    margin-top: 25px;
+    text-align: center;
+  }
+  nav a {
+    color: #28a745;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  nav a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+
+<h1>Réserver un créneau</h1>
+
+<div id="slotsContainer">
+  <!-- Créneaux et heures affichés ici -->
+</div>
+
+<nav>
+  <a href="pro.html" target="_blank">Page Professionnel →</a>
+</nav>
+
+<script>
+  const slotsContainer = document.getElementById('slotsContainer');
+
+  function loadSlots() {
+    return JSON.parse(localStorage.getItem('slots') || '[]');
+  }
+  function saveSlots(slots) {
+    localStorage.setItem('slots', JSON.stringify(slots));
+  }
+
+  function formatHour(dateStr) {
+    const date = new Date(dateStr);
+    return date.getHours().toString().padStart(2,'0') + 'h';
+  }
+
+  function getHourSlots(slot) {
+    const start = new Date(slot.start);
+    const end = new Date(slot.end);
+    const hours = [];
+    let cursor = new Date(start);
+    cursor.setMinutes(0,0,0); // à l'heure pile
+
+    // On génère chaque tranche d'1h entre start et end (non incluse)
+    while (cursor < end) {
+      // on ne prend que les heures dans l'intervalle start <= heure < end
+      if (cursor >= start && (new Date(cursor.getTime() + 3600000)) <= end) {
+        hours.push(new Date(cursor));
+      }
+      cursor.setHours(cursor.getHours() + 1);
+    }
+    return hours;
+  }
+
+  function renderSlots() {
+    slotsContainer.innerHTML = '';
+    const slots = loadSlots();
+    if (slots.length === 0) {
+      slotsContainer.innerHTML = '<p>Aucune disponibilité pour le moment.</p>';
+      return;
+    }
+
+    slots.forEach((slot, idx) => {
+      const slotDiv = document.createElement('div');
+      slotDiv.className = 'slot';
+
+      const descP = document.createElement('p');
+      descP.className = 'desc';
+      descP.textContent = slot.desc;
+      slotDiv.appendChild(descP);
+
+      const hoursDiv = document.createElement('div');
+      hoursDiv.className = 'hours';
+
+      const bookedHours = slot.bookings || [];
+
+      const hourSlots = getHourSlots(slot);
+
+      hourSlots.forEach(hourDate => {
+        const hourStr = hourDate.toISOString();
+
+        const btn = document.createElement('button');
+        btn.className = 'hour-btn';
+
+        const displayHour = formatHour(hourDate);
+
+        if (bookedHours.includes(hourStr)) {
+          btn.textContent = displayHour + ' (réservé)';
+          btn.classList.add('booked');
+          btn.disabled = true;
+        } else {
+          btn.textContent = displayHour;
+          btn.addEventListener('click', () => {
+            const userName = prompt('Votre nom pour la réservation :');
+            if (!userName || !userName.trim()) {
+              alert('Nom obligatoire pour réserver.');
+              return;
+            }
+            // Ajouter la réservation
+            bookedHours.push(hourStr);
+            slot.bookings = bookedHours;
+            const slots = loadSlots();
+            slots[idx] = slot;
+            saveSlots(slots);
+            alert(`Merci ${userName.trim()}, réservation confirmée pour ${displayHour}`);
+            renderSlots();
+          });
+        }
+        hoursDiv.appendChild(btn);
+      });
+
+      slotDiv.appendChild(hoursDiv);
+      slotsContainer.appendChild(slotDiv);
+    });
+  }
+
+  renderSlots();
+</script>
+
+</body>
+</html>
