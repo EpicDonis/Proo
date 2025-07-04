@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Planning Professionnel - Ajouter Disponibilités</title>
+<style>
+  body {
+    max-width: 600px;
+    margin: auto;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background: #f0f0f0;
+  }
+  h1 {
+    text-align: center;
+    color: #333;
+  }
+  label {
+    display: block;
+    margin-top: 12px;
+    font-weight: bold;
+  }
+  input[type="datetime-local"], textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    font-size: 1rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+  textarea {
+    min-height: 50px;
+  }
+  button {
+    margin-top: 15px;
+    background-color: #28a745;
+    border: none;
+    color: white;
+    padding: 12px;
+    font-size: 1.1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+  }
+  button:hover {
+    background-color: #218838;
+  }
+  .error {
+    color: red;
+    margin-top: 8px;
+    font-weight: bold;
+  }
+  nav {
+    margin-top: 25px;
+    text-align: center;
+  }
+  nav a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  nav a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+
+<h1>Professionnel - Ajouter des disponibilités</h1>
+
+<label for="start">Début :</label>
+<input type="datetime-local" id="start" />
+
+<label for="end">Fin :</label>
+<input type="datetime-local" id="end" />
+
+<label for="desc">Description :</label>
+<textarea id="desc" placeholder="Ex : Consultation"></textarea>
+
+<button id="addBtn">Ajouter disponibilité</button>
+
+<p id="error" class="error"></p>
+
+<nav>
+  <a href="client.html" target="_blank">Voir la page client →</a>
+</nav>
+
+<script>
+  const startInput = document.getElementById('start');
+  const endInput = document.getElementById('end');
+  const descInput = document.getElementById('desc');
+  const addBtn = document.getElementById('addBtn');
+  const errorP = document.getElementById('error');
+
+  function loadSlots() {
+    return JSON.parse(localStorage.getItem('slots') || '[]');
+  }
+  function saveSlots(slots) {
+    localStorage.setItem('slots', JSON.stringify(slots));
+  }
+
+  function validateDates(start, end) {
+    const now = new Date();
+    if (start <= now) return 'La date de début doit être dans le futur.';
+    if (end <= start) return 'La date de fin doit être après la date de début.';
+    return null;
+  }
+
+  addBtn.addEventListener('click', () => {
+    errorP.textContent = '';
+    const startVal = startInput.value;
+    const endVal = endInput.value;
+    const descVal = descInput.value.trim();
+
+    if (!startVal || !endVal || !descVal) {
+      errorP.textContent = 'Merci de remplir tous les champs.';
+      return;
+    }
+
+    const startDate = new Date(startVal);
+    const endDate = new Date(endVal);
+
+    const err = validateDates(startDate, endDate);
+    if (err) {
+      errorP.textContent = err;
+      return;
+    }
+
+    const slots = loadSlots();
+
+    // Vérifier chevauchement
+    for (const slot of slots) {
+      const s = new Date(slot.start);
+      const e = new Date(slot.end);
+      if (startDate < e && endDate > s) {
+        errorP.textContent = 'Ce créneau chevauche une disponibilité existante.';
+        return;
+      }
+    }
+
+    slots.push({
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
+      desc: descVal,
+      bookings: [] // liste des heures réservées dans ce slot
+    });
+    saveSlots(slots);
+
+    startInput.value = '';
+    endInput.value = '';
+    descInput.value = '';
+
+    alert('Disponibilité ajoutée avec succès !');
+  });
+</script>
+
+</body>
+</html>
